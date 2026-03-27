@@ -64,6 +64,13 @@
       --board-height: 0px;
     }
 
+    .controls-stack {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
     canvas {
       display: block;
       border-radius: 28px;
@@ -85,35 +92,36 @@
       box-shadow: var(--shadow);
       backdrop-filter: blur(14px) saturate(140%);
       -webkit-backdrop-filter: blur(14px) saturate(140%);
+      pointer-events: auto;
     }
 
-    .board-shell[data-rotated="false"] .control-rail {
+    .board-shell[data-controls="sideline"][data-rotated="false"] .control-rail {
       flex-direction: column;
     }
 
-    .board-shell[data-rotated="true"] .control-rail {
+    .board-shell[data-controls="sideline"][data-rotated="true"] .control-rail {
       flex-direction: row;
     }
 
-    .control-rail--ink {
+    .board-shell[data-controls="sideline"] .control-rail--ink {
       left: calc(var(--board-left) + 16px);
       top: calc(var(--board-top) + (var(--board-height) / 2));
       transform: translateY(-50%);
     }
 
-    .control-rail--actions {
+    .board-shell[data-controls="sideline"] .control-rail--actions {
       left: calc(var(--board-left) + var(--board-width) - 16px);
       top: calc(var(--board-top) + (var(--board-height) / 2));
       transform: translate(-100%, -50%);
     }
 
-    .board-shell[data-rotated="true"] .control-rail--ink {
+    .board-shell[data-controls="sideline"][data-rotated="true"] .control-rail--ink {
       left: calc(var(--board-left) + (var(--board-width) / 2));
       top: calc(var(--board-top) + 16px);
       transform: translateX(-50%);
     }
 
-    .board-shell[data-rotated="true"] .control-rail--actions {
+    .board-shell[data-controls="sideline"][data-rotated="true"] .control-rail--actions {
       left: calc(var(--board-left) + (var(--board-width) / 2));
       top: calc(var(--board-top) + var(--board-height) - 16px);
       transform: translate(-50%, -100%);
@@ -207,57 +215,69 @@
     }
 
     @media (max-width: 720px) and (orientation: portrait) {
-      .control-rail {
-        gap: 6px;
-        padding: 6px;
-        background: rgba(255, 255, 255, 0.16);
+      .board-shell[data-controls="bottom"] .controls-stack {
+        left: 50%;
+        top: calc(var(--board-top) + var(--board-height) + 10px);
+        right: auto;
+        bottom: auto;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        width: min(calc(var(--board-width) - 12px), 320px);
       }
 
-      button {
+      .board-shell[data-controls="bottom"] .control-rail {
+        position: static;
+        transform: none;
+        gap: 6px;
+        padding: 6px 8px;
+        background: rgba(255, 255, 255, 0.16);
+        flex-direction: row;
+      }
+
+      .board-shell[data-controls="bottom"] button {
         font-size: 0.75rem;
         min-width: 40px;
         min-height: 40px;
         padding: 7px 10px;
       }
 
-      .color-btn {
+      .board-shell[data-controls="bottom"] .color-btn {
         min-width: 52px;
         gap: 6px;
       }
 
-      .control-rail--ink {
-        left: calc(var(--board-left) + 8px);
-        top: calc(var(--board-top) + (var(--board-height) * 0.64));
-      }
-
-      .control-rail--actions {
-        left: calc(var(--board-left) + var(--board-width) - 8px);
-        top: calc(var(--board-top) + (var(--board-height) * 0.64));
+      .board-shell[data-controls="bottom"] .control-rail--actions {
+        justify-content: center;
       }
     }
   </style>
 </head>
 <body>
   <div class="app" id="app">
-    <div class="board-shell" id="boardShell" data-rotated="false">
-      <div class="control-rail control-rail--ink" aria-label="Ink controls">
-        <button type="button" class="color-btn active" data-color="red" aria-label="Use red ink" aria-pressed="true">
-          <span class="swatch swatch--red" aria-hidden="true"></span>
-          <span>Red</span>
-        </button>
-        <button type="button" class="color-btn" data-color="blue" aria-label="Use blue ink" aria-pressed="false">
-          <span class="swatch swatch--blue" aria-hidden="true"></span>
-          <span>Blue</span>
-        </button>
-      </div>
-
+    <div class="board-shell" id="boardShell" data-rotated="false" data-controls="sideline">
       <canvas id="board" aria-label="Basketball whiteboard"></canvas>
 
-      <div class="control-rail control-rail--actions" aria-label="Board actions">
-        <button type="button" id="undoBtn">Undo</button>
-        <button type="button" id="redoBtn">Redo</button>
-        <button type="button" id="clearBtn">Clear</button>
-        <button type="button" id="fullscreenBtn" aria-pressed="false">Full</button>
+      <div class="controls-stack">
+        <div class="control-rail control-rail--ink" aria-label="Ink controls">
+          <button type="button" class="color-btn active" data-color="red" aria-label="Use red ink" aria-pressed="true">
+            <span class="swatch swatch--red" aria-hidden="true"></span>
+            <span>Red</span>
+          </button>
+          <button type="button" class="color-btn" data-color="blue" aria-label="Use blue ink" aria-pressed="false">
+            <span class="swatch swatch--blue" aria-hidden="true"></span>
+            <span>Blue</span>
+          </button>
+        </div>
+
+        <div class="control-rail control-rail--actions" aria-label="Board actions">
+          <button type="button" id="undoBtn">Undo</button>
+          <button type="button" id="redoBtn">Redo</button>
+          <button type="button" id="clearBtn">Clear</button>
+          <button type="button" id="fullscreenBtn" aria-pressed="false">Full</button>
+        </div>
       </div>
     </div>
   </div>
@@ -300,6 +320,10 @@
 
     function isLandscape() {
       return window.matchMedia("(orientation: landscape)").matches;
+    }
+
+    function usesBottomControls() {
+      return window.matchMedia("(max-width: 720px) and (orientation: portrait)").matches;
     }
 
     function pointInsideCourt(point) {
@@ -412,6 +436,9 @@
 
       const shellRect = boardShell.getBoundingClientRect();
       const rotated = isLandscape();
+      const bottomControls = usesBottomControls();
+      const controlsReserve = bottomControls ? 118 : 0;
+      const availableHeight = Math.max(0, shellRect.height - controlsReserve);
       const displayAspect = rotated
         ? courtImage.naturalHeight / courtImage.naturalWidth
         : courtImage.naturalWidth / courtImage.naturalHeight;
@@ -419,13 +446,13 @@
       let width = shellRect.width;
       let height = width / displayAspect;
 
-      if (height > shellRect.height) {
-        height = shellRect.height;
+      if (height > availableHeight) {
+        height = availableHeight;
         width = height * displayAspect;
       }
 
       const boardLeft = (shellRect.width - width) / 2;
-      const boardTop = (shellRect.height - height) / 2;
+      const boardTop = (availableHeight - height) / 2;
 
       layout.rotated = rotated;
       layout.surfaceWidth = width;
@@ -443,6 +470,7 @@
       layout.ty = layout.offsetY;
 
       boardShell.dataset.rotated = String(rotated);
+      boardShell.dataset.controls = bottomControls ? "bottom" : "sideline";
       boardShell.style.setProperty("--board-left", `${boardLeft}px`);
       boardShell.style.setProperty("--board-top", `${boardTop}px`);
       boardShell.style.setProperty("--board-width", `${width}px`);
