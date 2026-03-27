@@ -7,13 +7,13 @@
   <style>
     :root {
       --page: #ffffff;
-      --panel: rgba(255, 255, 255, 0.96);
-      --panel-border: #d6dce5;
       --text: #111827;
-      --muted: #687385;
       --red: #cf2f3f;
       --blue: #2454c8;
-      --shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+      --glass: rgba(255, 255, 255, 0.22);
+      --glass-strong: rgba(255, 255, 255, 0.34);
+      --glass-border: rgba(17, 24, 39, 0.14);
+      --shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
     }
 
     * {
@@ -43,80 +43,121 @@
       width: 100dvw;
       height: 100vh;
       height: 100dvh;
-      padding:
-        max(14px, env(safe-area-inset-top))
-        max(14px, env(safe-area-inset-right))
-        max(14px, env(safe-area-inset-bottom))
-        max(14px, env(safe-area-inset-left));
       background: #ffffff;
     }
 
-    .toolbar {
+    .board-shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding:
+        max(16px, env(safe-area-inset-top))
+        max(16px, env(safe-area-inset-right))
+        max(16px, env(safe-area-inset-bottom))
+        max(16px, env(safe-area-inset-left));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      --board-left: 0px;
+      --board-top: 0px;
+      --board-width: 0px;
+      --board-height: 0px;
+    }
+
+    canvas {
+      display: block;
+      border-radius: 28px;
+      background: #ffffff;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: var(--shadow);
+      touch-action: none;
+    }
+
+    .control-rail {
       position: absolute;
-      top: max(14px, env(safe-area-inset-top));
-      left: 50%;
       z-index: 2;
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
       gap: 10px;
-      align-items: center;
-      width: min(94vw, 760px);
-      padding: 12px;
-      transform: translateX(-50%);
-      border: 1px solid var(--panel-border);
-      border-radius: 18px;
-      background: var(--panel);
+      padding: 10px;
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      background: var(--glass);
       box-shadow: var(--shadow);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
     }
 
-    .toolbar__label {
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
+    .board-shell[data-rotated="false"] .control-rail {
+      flex-direction: column;
     }
 
-    .tool-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .board-shell[data-rotated="true"] .control-rail {
+      flex-direction: row;
+    }
+
+    .control-rail--ink {
+      left: calc(var(--board-left) + 16px);
+      top: calc(var(--board-top) + (var(--board-height) / 2));
+      transform: translateY(-50%);
+    }
+
+    .control-rail--actions {
+      left: calc(var(--board-left) + var(--board-width) - 16px);
+      top: calc(var(--board-top) + (var(--board-height) / 2));
+      transform: translate(-100%, -50%);
+    }
+
+    .board-shell[data-rotated="true"] .control-rail--ink {
+      left: calc(var(--board-left) + (var(--board-width) / 2));
+      top: calc(var(--board-top) + 16px);
+      transform: translateX(-50%);
+    }
+
+    .board-shell[data-rotated="true"] .control-rail--actions {
+      left: calc(var(--board-left) + (var(--board-width) / 2));
+      top: calc(var(--board-top) + var(--board-height) - 16px);
+      transform: translate(-50%, -100%);
     }
 
     button {
       appearance: none;
-      border: 1px solid var(--panel-border);
+      border: 1px solid rgba(17, 24, 39, 0.12);
       border-radius: 999px;
-      background: #ffffff;
+      background: var(--glass-strong);
       color: var(--text);
       cursor: pointer;
       font: inherit;
-      min-height: 44px;
-      padding: 10px 16px;
-      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+      font-size: 0.92rem;
+      min-width: clamp(46px, 8vw, 58px);
+      min-height: clamp(46px, 8vw, 58px);
+      padding: 10px 14px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
     }
 
     button:hover:not(:disabled) {
       transform: translateY(-1px);
-      border-color: #bcc6d3;
-      background: #f8fafc;
+      background: rgba(255, 255, 255, 0.46);
+      border-color: rgba(17, 24, 39, 0.18);
     }
 
     button:disabled {
+      opacity: 0.38;
       cursor: default;
-      opacity: 0.42;
     }
 
     .color-btn {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      min-width: 98px;
+      justify-content: center;
+      gap: 8px;
+      min-width: clamp(58px, 10vw, 72px);
     }
 
     .color-btn.active {
-      border-color: #9aa8bb;
-      background: #eef3f8;
+      border-color: rgba(17, 24, 39, 0.24);
+      background: rgba(255, 255, 255, 0.54);
     }
 
     .swatch {
@@ -134,68 +175,46 @@
       background: var(--blue);
     }
 
-    .board-shell {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 88px 16px 16px;
-    }
-
-    canvas {
-      display: block;
-      border-radius: 24px;
-      background: #ffffff;
-      border: 1px solid #d9e1ea;
-      box-shadow: var(--shadow);
-      touch-action: none;
-    }
-
-    @media (max-width: 640px) {
-      .toolbar {
-        top: auto;
-        bottom: max(14px, env(safe-area-inset-bottom));
-      }
-
-      .board-shell {
-        padding: 16px 12px 96px;
+    @media (max-width: 720px) {
+      .control-rail {
+        gap: 8px;
+        padding: 8px;
       }
 
       button {
-        padding: 10px 14px;
+        font-size: 0.82rem;
+        padding: 8px 12px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="toolbar" aria-label="Drawing controls">
-      <span class="toolbar__label">Ink</span>
-      <div class="tool-group" role="group" aria-label="Ink color">
-        <button type="button" class="color-btn active" data-color="red" aria-pressed="true">
+  <div class="app" id="app">
+    <div class="board-shell" id="boardShell" data-rotated="false">
+      <div class="control-rail control-rail--ink" aria-label="Ink controls">
+        <button type="button" class="color-btn active" data-color="red" aria-label="Use red ink" aria-pressed="true">
           <span class="swatch swatch--red" aria-hidden="true"></span>
-          Red
+          <span>Red</span>
         </button>
-        <button type="button" class="color-btn" data-color="blue" aria-pressed="false">
+        <button type="button" class="color-btn" data-color="blue" aria-label="Use blue ink" aria-pressed="false">
           <span class="swatch swatch--blue" aria-hidden="true"></span>
-          Blue
+          <span>Blue</span>
         </button>
       </div>
-      <span class="toolbar__label">Edit</span>
-      <div class="tool-group" role="group" aria-label="History controls">
+
+      <canvas id="board" aria-label="Basketball whiteboard"></canvas>
+
+      <div class="control-rail control-rail--actions" aria-label="Board actions">
         <button type="button" id="undoBtn">Undo</button>
         <button type="button" id="redoBtn">Redo</button>
         <button type="button" id="clearBtn">Clear</button>
+        <button type="button" id="fullscreenBtn" aria-pressed="false">Full</button>
       </div>
-    </div>
-
-    <div class="board-shell" id="boardShell">
-      <canvas id="board" aria-label="Basketball whiteboard"></canvas>
     </div>
   </div>
 
   <script>
+    const app = document.getElementById("app");
     const boardShell = document.getElementById("boardShell");
     const canvas = document.getElementById("board");
     const ctx = canvas.getContext("2d");
@@ -203,6 +222,7 @@
     const undoBtn = document.getElementById("undoBtn");
     const redoBtn = document.getElementById("redoBtn");
     const clearBtn = document.getElementById("clearBtn");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
 
     const ink = {
       red: "#cf2f3f",
@@ -278,9 +298,9 @@
         return;
       }
 
-      for (let i = 1; i < stroke.points.length; i += 1) {
-        const previous = stroke.points[i - 1];
-        const current = stroke.points[i];
+      for (let index = 1; index < stroke.points.length; index += 1) {
+        const previous = stroke.points[index - 1];
+        const current = stroke.points[index];
         ctx.lineWidth = 18 + current.pressure * 18;
         ctx.beginPath();
         ctx.moveTo(previous.x, previous.y);
@@ -301,9 +321,16 @@
       ctx.scale(layout.scale, layout.scale);
     }
 
-    function render() {
+    function syncButtons() {
       undoBtn.disabled = history.length === 0;
       redoBtn.disabled = redoStack.length === 0;
+      const isFullscreen = Boolean(document.fullscreenElement);
+      fullscreenBtn.textContent = isFullscreen ? "Exit" : "Full";
+      fullscreenBtn.setAttribute("aria-pressed", String(isFullscreen));
+    }
+
+    function render() {
+      syncButtons();
 
       ctx.clearRect(0, 0, layout.surfaceWidth, layout.surfaceHeight);
       ctx.fillStyle = "#ffffff";
@@ -348,16 +375,29 @@
         width = height * displayAspect;
       }
 
+      const boardLeft = (shellRect.width - width) / 2;
+      const boardTop = (shellRect.height - height) / 2;
+
       layout.rotated = rotated;
       layout.surfaceWidth = width;
       layout.surfaceHeight = height;
       layout.scale = rotated
         ? Math.min(width / courtImage.naturalHeight, height / courtImage.naturalWidth)
         : Math.min(width / courtImage.naturalWidth, height / courtImage.naturalHeight);
-      layout.offsetX = rotated ? (width - courtImage.naturalHeight * layout.scale) / 2 : (width - courtImage.naturalWidth * layout.scale) / 2;
-      layout.offsetY = rotated ? (height - courtImage.naturalWidth * layout.scale) / 2 : (height - courtImage.naturalHeight * layout.scale) / 2;
+      layout.offsetX = rotated
+        ? (width - courtImage.naturalHeight * layout.scale) / 2
+        : (width - courtImage.naturalWidth * layout.scale) / 2;
+      layout.offsetY = rotated
+        ? (height - courtImage.naturalWidth * layout.scale) / 2
+        : (height - courtImage.naturalHeight * layout.scale) / 2;
       layout.tx = layout.offsetX + courtImage.naturalHeight * layout.scale;
       layout.ty = layout.offsetY;
+
+      boardShell.dataset.rotated = String(rotated);
+      boardShell.style.setProperty("--board-left", `${boardLeft}px`);
+      boardShell.style.setProperty("--board-top", `${boardTop}px`);
+      boardShell.style.setProperty("--board-width", `${width}px`);
+      boardShell.style.setProperty("--board-height", `${height}px`);
 
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
@@ -406,13 +446,11 @@
       }
 
       const point = eventToCourtPoint(event);
-      const clampedPoint = {
+      activeStroke.points.push({
         x: Math.max(0, Math.min(courtImage.naturalWidth, point.x)),
         y: Math.max(0, Math.min(courtImage.naturalHeight, point.y)),
         pressure: point.pressure
-      };
-
-      activeStroke.points.push(clampedPoint);
+      });
       render();
     }
 
@@ -426,6 +464,20 @@
       activeStroke = null;
       activePointerId = null;
       render();
+    }
+
+    async function toggleFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          if (app.requestFullscreen) {
+            await app.requestFullscreen();
+          }
+        } else if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      } catch (error) {
+        console.error("Fullscreen request failed.", error);
+      }
     }
 
     canvas.addEventListener("pointerdown", (event) => {
@@ -471,18 +523,31 @@
       render();
     });
 
+    fullscreenBtn.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", () => {
+      syncButtons();
+      updateLayout();
+    });
+
     window.addEventListener("resize", updateLayout);
     window.addEventListener("orientationchange", updateLayout);
+    window.visualViewport?.addEventListener("resize", updateLayout);
+
+    if ("ResizeObserver" in window) {
+      const resizeObserver = new ResizeObserver(updateLayout);
+      resizeObserver.observe(boardShell);
+    }
 
     courtImage.addEventListener("load", updateLayout);
     courtImage.addEventListener("error", () => {
       ctx.fillStyle = "#111827";
       ctx.font = "600 18px Avenir Next, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Could not load the court diagram image.", canvas.width / 2, canvas.height / 2);
+      ctx.fillText("Could not load the court diagram image.", layout.surfaceWidth / 2, layout.surfaceHeight / 2);
     });
 
     setColor(activeColor);
+    syncButtons();
     render();
 
     if (courtImage.complete) {
