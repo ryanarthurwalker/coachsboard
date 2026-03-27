@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Basketball Coach Board</title>
+  <style>
+    :root {
+      --page: #ffffff;
+      --panel: rgba(255, 255, 255, 0.96);
+      --panel-border: #d6dce5;
+      --text: #111827;
+      --muted: #687385;
+      --red: #cf2f3f;
+      --blue: #2454c8;
+      --shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      background: var(--page);
+      color: var(--text);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    body {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .app {
+      position: relative;
+      width: 100vw;
+      width: 100dvw;
+      height: 100vh;
+      height: 100dvh;
+      padding:
+        max(14px, env(safe-area-inset-top))
+        max(14px, env(safe-area-inset-right))
+        max(14px, env(safe-area-inset-bottom))
+        max(14px, env(safe-area-inset-left));
+      background: #ffffff;
+    }
+
+    .toolbar {
+      position: absolute;
+      top: max(14px, env(safe-area-inset-top));
+      left: 50%;
+      z-index: 2;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      align-items: center;
+      width: min(94vw, 760px);
+      padding: 12px;
+      transform: translateX(-50%);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar__label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      background: #ffffff;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      min-height: 44px;
+      padding: 10px 16px;
+      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: #bcc6d3;
+      background: #f8fafc;
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.42;
+    }
+
+    .color-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 98px;
+    }
+
+    .color-btn.active {
+      border-color: #9aa8bb;
+      background: #eef3f8;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 0, 0, 0.12);
+    }
+
+    .swatch--red {
+      background: var(--red);
+    }
+
+    .swatch--blue {
+      background: var(--blue);
+    }
+
+    .board-shell {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 88px 16px 16px;
+    }
+
+    canvas {
+      display: block;
+      border-radius: 24px;
+      background: #ffffff;
+      border: 1px solid #d9e1ea;
+      box-shadow: var(--shadow);
+      touch-action: none;
+    }
+
+    @media (max-width: 640px) {
+      .toolbar {
+        top: auto;
+        bottom: max(14px, env(safe-area-inset-bottom));
+      }
+
+      .board-shell {
+        padding: 16px 12px 96px;
+      }
+
+      button {
+        padding: 10px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="toolbar" aria-label="Drawing controls">
+      <span class="toolbar__label">Ink</span>
+      <div class="tool-group" role="group" aria-label="Ink color">
+        <button type="button" class="color-btn active" data-color="red" aria-pressed="true">
+          <span class="swatch swatch--red" aria-hidden="true"></span>
+          Red
+        </button>
+        <button type="button" class="color-btn" data-color="blue" aria-pressed="false">
+          <span class="swatch swatch--blue" aria-hidden="true"></span>
+          Blue
+        </button>
+      </div>
+      <span class="toolbar__label">Edit</span>
+      <div class="tool-group" role="group" aria-label="History controls">
+        <button type="button" id="undoBtn">Undo</button>
+        <button type="button" id="redoBtn">Redo</button>
+        <button type="button" id="clearBtn">Clear</button>
+      </div>
+    </div>
+
+    <div class="board-shell" id="boardShell">
+      <canvas id="board" aria-label="Basketball whiteboard"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const boardShell = document.getElementById("boardShell");
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+    const colorButtons = [...document.querySelectorAll("[data-color]")];
+    const undoBtn = document.getElementById("undoBtn");
+    const redoBtn = document.getElementById("redoBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    const ink = {
+      red: "#cf2f3f",
+      blue: "#2454c8"
+    };
+
+    const courtImage = new Image();
+    courtImage.src = "./basketball-court-diagram.png";
+
+    let activeColor = "red";
+    let history = [];
+    let redoStack = [];
+    let activeStroke = null;
+    let activePointerId = null;
+
+    const layout = {
+      rotated: false,
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+      tx: 0,
+      ty: 0,
+      surfaceWidth: 0,
+      surfaceHeight: 0
+    };
+
+    function isLandscape() {
+      return window.matchMedia("(orientation: landscape)").matches;
+    }
+
+    function pointInsideCourt(point) {
+      return point.x >= 0 && point.x <= courtImage.naturalWidth &&
+        point.y >= 0 && point.y <= courtImage.naturalHeight;
+    }
+
+    function eventToCourtPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const pressure = event.pressure && event.pressure > 0 ? event.pressure : 0.5;
+
+      if (layout.rotated) {
+        const localX = x - layout.tx;
+        const localY = y - layout.ty;
+        return {
+          x: localY / layout.scale,
+          y: -localX / layout.scale,
+          pressure
+        };
+      }
+
+      return {
+        x: (x - layout.offsetX) / layout.scale,
+        y: (y - layout.offsetY) / layout.scale,
+        pressure
+      };
+    }
+
+    function drawStroke(stroke) {
+      if (!stroke.points.length) {
+        return;
+      }
+
+      ctx.strokeStyle = stroke.color;
+      ctx.fillStyle = stroke.color;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (stroke.points.length === 1) {
+        ctx.beginPath();
+        ctx.arc(stroke.points[0].x, stroke.points[0].y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+      }
+
+      for (let i = 1; i < stroke.points.length; i += 1) {
+        const previous = stroke.points[i - 1];
+        const current = stroke.points[i];
+        ctx.lineWidth = 18 + current.pressure * 18;
+        ctx.beginPath();
+        ctx.moveTo(previous.x, previous.y);
+        ctx.lineTo(current.x, current.y);
+        ctx.stroke();
+      }
+    }
+
+    function applyCourtTransform() {
+      if (layout.rotated) {
+        ctx.translate(layout.tx, layout.ty);
+        ctx.rotate(Math.PI / 2);
+        ctx.scale(layout.scale, layout.scale);
+        return;
+      }
+
+      ctx.translate(layout.offsetX, layout.offsetY);
+      ctx.scale(layout.scale, layout.scale);
+    }
+
+    function render() {
+      undoBtn.disabled = history.length === 0;
+      redoBtn.disabled = redoStack.length === 0;
+
+      ctx.clearRect(0, 0, layout.surfaceWidth, layout.surfaceHeight);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, layout.surfaceWidth, layout.surfaceHeight);
+
+      if (!courtImage.complete || !courtImage.naturalWidth || !courtImage.naturalHeight) {
+        ctx.fillStyle = "#111827";
+        ctx.font = "600 18px Avenir Next, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Loading court diagram...", layout.surfaceWidth / 2, layout.surfaceHeight / 2);
+        return;
+      }
+
+      ctx.save();
+      applyCourtTransform();
+      ctx.drawImage(courtImage, 0, 0, courtImage.naturalWidth, courtImage.naturalHeight);
+      history.forEach(drawStroke);
+
+      if (activeStroke) {
+        drawStroke(activeStroke);
+      }
+
+      ctx.restore();
+    }
+
+    function updateLayout() {
+      if (!courtImage.naturalWidth || !courtImage.naturalHeight) {
+        return;
+      }
+
+      const shellRect = boardShell.getBoundingClientRect();
+      const rotated = isLandscape();
+      const displayAspect = rotated
+        ? courtImage.naturalHeight / courtImage.naturalWidth
+        : courtImage.naturalWidth / courtImage.naturalHeight;
+
+      let width = shellRect.width;
+      let height = width / displayAspect;
+
+      if (height > shellRect.height) {
+        height = shellRect.height;
+        width = height * displayAspect;
+      }
+
+      layout.rotated = rotated;
+      layout.surfaceWidth = width;
+      layout.surfaceHeight = height;
+      layout.scale = rotated
+        ? Math.min(width / courtImage.naturalHeight, height / courtImage.naturalWidth)
+        : Math.min(width / courtImage.naturalWidth, height / courtImage.naturalHeight);
+      layout.offsetX = rotated ? (width - courtImage.naturalHeight * layout.scale) / 2 : (width - courtImage.naturalWidth * layout.scale) / 2;
+      layout.offsetY = rotated ? (height - courtImage.naturalWidth * layout.scale) / 2 : (height - courtImage.naturalHeight * layout.scale) / 2;
+      layout.tx = layout.offsetX + courtImage.naturalHeight * layout.scale;
+      layout.ty = layout.offsetY;
+
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+      render();
+    }
+
+    function setColor(colorName) {
+      activeColor = colorName;
+      colorButtons.forEach((button) => {
+        const isActive = button.dataset.color === colorName;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+    }
+
+    function startStroke(event) {
+      if (activePointerId !== null || !courtImage.naturalWidth) {
+        return;
+      }
+
+      const point = eventToCourtPoint(event);
+
+      if (!pointInsideCourt(point)) {
+        return;
+      }
+
+      activePointerId = event.pointerId;
+      canvas.setPointerCapture(event.pointerId);
+      activeStroke = {
+        color: ink[activeColor],
+        points: [point]
+      };
+      redoStack = [];
+      render();
+    }
+
+    function moveStroke(event) {
+      if (event.pointerId !== activePointerId || !activeStroke) {
+        return;
+      }
+
+      const point = eventToCourtPoint(event);
+      const clampedPoint = {
+        x: Math.max(0, Math.min(courtImage.naturalWidth, point.x)),
+        y: Math.max(0, Math.min(courtImage.naturalHeight, point.y)),
+        pressure: point.pressure
+      };
+
+      activeStroke.points.push(clampedPoint);
+      render();
+    }
+
+    function endStroke(event) {
+      if (event.pointerId !== activePointerId || !activeStroke) {
+        return;
+      }
+
+      moveStroke(event);
+      history.push(activeStroke);
+      activeStroke = null;
+      activePointerId = null;
+      render();
+    }
+
+    canvas.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      startStroke(event);
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      event.preventDefault();
+      moveStroke(event);
+    });
+
+    canvas.addEventListener("pointerup", endStroke);
+    canvas.addEventListener("pointercancel", endStroke);
+
+    colorButtons.forEach((button) => {
+      button.addEventListener("click", () => setColor(button.dataset.color));
+    });
+
+    undoBtn.addEventListener("click", () => {
+      if (!history.length) {
+        return;
+      }
+
+      redoStack.push(history.pop());
+      render();
+    });
+
+    redoBtn.addEventListener("click", () => {
+      if (!redoStack.length) {
+        return;
+      }
+
+      history.push(redoStack.pop());
+      render();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      history = [];
+      redoStack = [];
+      activeStroke = null;
+      activePointerId = null;
+      render();
+    });
+
+    window.addEventListener("resize", updateLayout);
+    window.addEventListener("orientationchange", updateLayout);
+
+    courtImage.addEventListener("load", updateLayout);
+    courtImage.addEventListener("error", () => {
+      ctx.fillStyle = "#111827";
+      ctx.font = "600 18px Avenir Next, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Could not load the court diagram image.", canvas.width / 2, canvas.height / 2);
+    });
+
+    setColor(activeColor);
+    render();
+
+    if (courtImage.complete) {
+      updateLayout();
+    }
+  </script>
+</body>
+</html>
